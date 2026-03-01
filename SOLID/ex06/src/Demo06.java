@@ -1,8 +1,6 @@
 import java.util.*;
 
-
-
-public class Demo06{
+public class Demo06 {
 
     public static void main(String[] args) {
 
@@ -10,13 +8,17 @@ public class Demo06{
 
         AuditLog audit = new AuditLog();
 
-        Notification n = new Notification("Welcome","Hello and welcome to SST!","riya@sst.edu","9876543210");
+        Notification n = new Notification(
+                "Welcome",
+                "Hello and welcome to SST!",
+                "riya@sst.edu",
+                "9876543210"
+        );
 
         NotificationSender email = new EmailSender(audit);
         NotificationSender sms = new SmsSender(audit);
         NotificationSender wa = new WhatsAppSender(audit);
 
-       
         email.send(n);
         sms.send(n);
         wa.send(n);
@@ -25,7 +27,7 @@ public class Demo06{
     }
 }
 
-
+/* ================= BASE CLASS ================= */
 
 abstract class NotificationSender {
 
@@ -35,10 +37,23 @@ abstract class NotificationSender {
         this.audit = audit;
     }
 
-    public abstract void send(Notification n);
+    // Final → workflow cannot be changed
+    public final void send(Notification n) {
+
+        if (n == null)
+            throw new IllegalArgumentException("Notification cannot be null");
+
+        if (n.body == null)
+            throw new IllegalArgumentException("Body is required");
+
+        // Delegate to subclass
+        doSend(n);
+    }
+
+    protected abstract void doSend(Notification n);
 }
 
-/* EMAIL */
+/* ================= EMAIL ================= */
 
 class EmailSender extends NotificationSender {
 
@@ -47,14 +62,23 @@ class EmailSender extends NotificationSender {
     }
 
     @Override
-    public void send(Notification n) {
-        
-        System.out.println("EMAIL -> to=" + n.email +" subject=" + n.subject +" body=" + n.body);
+    protected void doSend(Notification n) {
+
+        if (n.email == null) {
+            System.out.println("EMAIL ERROR: email missing");
+            audit.add("email failed");
+            return;
+        }
+
+        System.out.println("EMAIL -> to=" + n.email
+                + " subject=" + n.subject
+                + " body=" + n.body);
+
         audit.add("email sent");
     }
 }
 
-/*SMS */
+/* ================= SMS ================= */
 
 class SmsSender extends NotificationSender {
 
@@ -63,14 +87,22 @@ class SmsSender extends NotificationSender {
     }
 
     @Override
-    public void send(Notification n) {
-        
-        System.out.println("SMS -> to=" + n.phone + " body=" + n.body);
+    protected void doSend(Notification n) {
+
+        if (n.phone == null) {
+            System.out.println("SMS ERROR: phone missing");
+            audit.add("sms failed");
+            return;
+        }
+
+        System.out.println("SMS -> to=" + n.phone
+                + " body=" + n.body);
+
         audit.add("sms sent");
     }
 }
 
-/*  WHATSAPP */
+/* ================= WHATSAPP ================= */
 
 class WhatsAppSender extends NotificationSender {
 
@@ -79,20 +111,23 @@ class WhatsAppSender extends NotificationSender {
     }
 
     @Override
-    public void send(Notification n) {
+    protected void doSend(Notification n) {
 
         if (n.phone == null || !n.phone.startsWith("+")) {
+            // No exception → no tightened precondition
             System.out.println("WA ERROR: phone must start with + and country code");
             audit.add("WA failed");
             return;
         }
 
-        System.out.println("WA -> to=" + n.phone +" body=" + n.body);
+        System.out.println("WA -> to=" + n.phone
+                + " body=" + n.body);
+
         audit.add("wa sent");
     }
 }
 
-/* NOTIFICATION */
+/* ================= NOTIFICATION ================= */
 
 class Notification {
 
@@ -101,7 +136,8 @@ class Notification {
     public final String email;
     public final String phone;
 
-    public Notification(String subject, String body, String email, String phone) {
+    public Notification(String subject, String body,
+                        String email, String phone) {
         this.subject = subject;
         this.body = body;
         this.email = email;
@@ -109,7 +145,7 @@ class Notification {
     }
 }
 
-/* AUDIT */
+/* ================= AUDIT ================= */
 
 class AuditLog {
 
